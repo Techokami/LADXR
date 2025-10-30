@@ -1,3 +1,4 @@
+import string
 from typing import List, Tuple, Optional, Union
 import os
 
@@ -5,7 +6,7 @@ import os
 class Setting:
     def __init__(self, key: str,
                  category: str, short_key: str, label: str, *,
-                 description: str, multiworld: bool = True, aesthetic: bool = False, options: Optional[List[Tuple[str, str, str]]] = None,
+                 description: str, aesthetic: bool = False, options: Optional[List[Tuple[str, str, str]]] = None,
                  default: Optional[Union[bool, float, str]] = None, placeholder: Optional[str] = None,
                  visible_if: Optional[List[str]] = None):
         if options:
@@ -21,7 +22,6 @@ class Setting:
         self.short_key = short_key
         self.label = label
         self.description = description
-        self.multiworld = multiworld
         self.aesthetic = aesthetic
         self.options = options
         self.default = default
@@ -41,7 +41,7 @@ class Setting:
                 raise ValueError(f"{value} is not an accepted value for {self.key} setting")
         if self.options:
             if value not in [k for k, s, v in self.options]:
-                raise ValueError(f"{value} is not an accepted value for {self.key} setting")
+                raise ValueError(f"{value} is not an accepted value for {self.key} setting: {','.join(k for k, s, v in self.options)}")
         self.value = value
 
     def getShortValue(self):
@@ -58,7 +58,6 @@ class Setting:
             "short_key": self.short_key,
             "label": self.label,
             "description": self.description,
-            "multiworld": self.multiworld,
             "aesthetic": self.aesthetic,
             "default": self.default,
         }
@@ -72,7 +71,7 @@ class Setting:
 
 
 class Settings:
-    def __init__(self, multiworld_count=None):
+    def __init__(self):
         gfx_options = [('', '', 'Default')]
         gfx_path = os.path.join(os.path.dirname(__file__), "gfx")
         for filename in sorted(os.listdir(gfx_path)):
@@ -84,7 +83,7 @@ class Settings:
                 gfx_options.append((filename, filename + ">", filename[:-4]))
 
         self.__all = [
-            Setting('seed', 'Main', '<', 'Seed', placeholder='Leave empty for random seed', default="", multiworld=False,
+            Setting('seed', 'Main', '<', 'Seed', placeholder='Leave empty for random seed', default="",
                 description="""For multiple people to generate the same randomization result, enter the generated seed number here.
 Note, not all strings are valid seeds."""),
             Setting('logic', 'Main', 'L', 'Logic', options=[('casual', 'c', 'Casual'), ('', '', 'Normal'), ('hard', 'h', 'Hard'), ('glitched', 'g', 'Glitched'), ('hell', 'H', 'Hell')], default='',
@@ -100,10 +99,10 @@ Note, not all strings are valid seeds."""),
                 description="""
 [100% Locations] Guaranteed that every single item can be reached and gained.
 [Beatable] Only guarantees that the game is beatable. Certain items/chests might never be reachable."""),
-            Setting('race', 'Main', 'V', 'Race mode', default=False, multiworld=False,
+            Setting('race', 'Main', 'V', 'Race mode', default=False,
                 description="""
 Spoiler logs can not be generated for ROMs generated with race mode enabled, and seed generation is slightly different."""),
-#             Setting('spoilerformat', 'Main', 'Spoiler Format', options=[('none', 'None'), ('text', 'Text'), ('json', 'JSON')], default='none', multiworld=False,
+#             Setting('spoilerformat', 'Main', 'Spoiler Format', options=[('none', 'None'), ('text', 'Text'), ('json', 'JSON')], default='none',
 #                 description="""Affects how the spoiler log is generated.
 # [None] No spoiler log is generated. One can still be manually dumped later.
 # [Text] Creates a .txt file meant for a human to read.
@@ -127,18 +126,37 @@ Spoiler logs can not be generated for ROMs generated with race mode enabled, and
 [Normal] Requires Magnifying Lens to get the Boomerang.
 [Trade] Allows to trade an inventory item for a random other inventory item. The Boomerang is shuffled.
 [Gift] You get a random gift of any item, and the Boomerang is shuffled."""),
-            Setting('dungeon_items', 'Gameplay', 'D', 'Dungeon items', options=[('', '', 'Standard'),
-                                                                          ('smallkeys', 's', 'Small keys'),
-                                                                          ('nightmarekeys', 'n', 'Nightmare keys'),
-                                                                          ('localkeys', 'L', 'Map/Compass/Beaks'),
-                                                                          ('localnightmarekey', 'N', 'MCB + SmallKeys'),
-                                                                          ('keysanity', 'K', 'Keysanity'),
-                                                                          ('keysy', 'k', 'Keysy')], default='',
-                description="""Sets if dungeon items can only be in their respective dungeon, or everywhere.
-[Standard] Dungeon items are only in their dungeon.
-[Maps/.../..] Specified items can be anywhere
-[Keysanity] All dungeon items can be anywhere.
-[Keysy] No keys, key doors are already open."""),
+            Setting('dungeon_keys', 'Dungeon Items', 'k', 'Dungeon keys', options=[('', '', 'Standard'),
+                                                                          ('keysanity', 'k', 'Keysanity'),
+                                                                          ('removed', 'r', 'Removed')], default='',
+                description="""Sets if dungeon keys can only be in their respective dungeon, or everywhere.
+[Standard] Dungeon keys are only in their dungeon.
+[Keysanity] Dungeon keys can be anywhere.
+[Removed] No keys, key doors are already open. (also known as Keysy)"""),
+            Setting('nightmare_keys', 'Dungeon Items', 'n', 'Nightmare keys', options=[('', '', 'Standard'),
+                                                                                   ('keysanity', 'k', 'Keysanity'),
+                                                                                   ('removed', 'r', 'Removed')],
+                    default='',
+                    description="""Sets if dungeon keys can only be in their respective dungeon, or everywhere.
+[Standard] Nightmare keys are only in their dungeon.
+[Keysanity] Nightmare keys can be anywhere.
+[Removed] No nightmare keys, nightmare doors are already open. (also known as Keysy)"""),
+            Setting('dungeon_beaks', 'Dungeon Items', 'Y', 'Dungeon beaks', options=[('', '', 'Standard'),
+                                                                                   ('keysanity', 'k', 'Keysanity'),
+                                                                                   ('removed', 'r', 'Removed')],
+                    default='',
+                    description="""Sets if dungeon beaks can only be in their respective dungeon, or everywhere.
+[Standard] Dungeon beaks are only in their dungeon.
+[Keysanity] Dungeon beaks can be anywhere.
+[Removed] No beaks."""),
+            Setting('dungeon_maps', 'Dungeon Items', 'D', 'Dungeon map/compass', options=[('', '', 'Standard'),
+                                                                                     ('keysanity', 'k', 'Keysanity'),
+                                                                                     ('removed', 'r', 'Removed')],
+                    default='',
+                    description="""Sets if dungeon maps/compasses can only be in their respective dungeon, or everywhere.
+[Standard] Dungeon maps/compasses are only in their dungeon.
+[Keysanity] Dungeon maps/compasses can be anywhere.
+[Removed] No maps/compasses."""),
             Setting('randomstartlocation', 'Entrances', 'r', 'Random start location', default=False,
                 description='Randomize where your starting house is located'),
             Setting('dungeonshuffle', 'Entrances', 'u', 'Dungeon shuffle', default=False,
@@ -280,24 +298,13 @@ Turns all the phone booths into extra shops, and lowers the prices, and allows b
                 aesthetic=True),
         ]
         self.__by_key = {s.key: s for s in self.__all}
-        self.__multiworld_count = multiworld_count
-        self.__multiworld_settings = []
 
         # Make sure all short keys are unique
         short_keys = {}
         for s in self.__all:
             assert s.short_key not in short_keys, f"{s.label}: {short_keys[s.short_key].label}"
             short_keys[s.short_key] = s
-
-    @property
-    def multiworld(self):  # returns the amount of multiworld players.
-        if self.__multiworld_settings:
-            return len(self.__multiworld_settings)
-        return self.__multiworld_count
-
-    @property
-    def multiworld_settings(self):
-        return self.__multiworld_settings
+        # print("Unused ss:", "".join([s for s in string.ascii_letters if s not in short_keys]))
 
     def __getattr__(self, item):
         return self.__by_key[item].value
@@ -379,6 +386,8 @@ Turns all the phone booths into extra shops, and lowers the prices, and allows b
         if self.overworld == "random":
             self.goal = "instruments"  # Force 4 dungeon goal for random overworld right now.
             self.goalcount = "4"
+        if self.hpmode == '5hit':
+            req("heartpiece", True, "5hit removes heart pieces")
 
     def set(self, value: str) -> None:
         if "=" in value:
