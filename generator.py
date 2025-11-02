@@ -80,7 +80,6 @@ def generateRom(args, settings, seed, logic, *, rnd=None):
     assembler.resetConsts()
     assembler.const("INV_SIZE", 16)
 
-    #assembler.const("HARDWARE_LINK", 1)
     assembler.const("HARD_MODE", 1 if settings.hardmode != "none" else 0)
     assembler.const("DUNGEON_CHAIN", 1 if settings.overworld == 'dungeonchain' else 0)
 
@@ -98,6 +97,7 @@ def generateRom(args, settings, seed, logic, *, rnd=None):
     patches.core.easyColorDungeonAccess(rom)
     patches.owl.removeOwlEvents(rom)
     patches.enemies.fixArmosKnightAsMiniboss(rom)
+    patches.enemies.enemyQoL(rom)
     patches.bank3e.addBank3E(rom, seed, settings)
     patches.bank3f.addBank3F(rom)
     patches.core.removeGhost(rom)
@@ -126,6 +126,8 @@ def generateRom(args, settings, seed, logic, *, rnd=None):
     patches.tarin.updateTarin(rom)
     patches.fishingMinigame.updateFinishingMinigame(rom)
     patches.health.upgradeHealthContainers(rom)
+    if settings.dungeon_beaks == "removed":
+        patches.owl.removeDungeonOwlBeakRequirement(rom)
     if settings.owlstatues in ("dungeon", "both"):
         patches.owl.upgradeDungeonOwlStatues(rom)
     if settings.owlstatues in ("overworld", "both"):
@@ -172,8 +174,8 @@ def generateRom(args, settings, seed, logic, *, rnd=None):
     patches.aesthetics.noSwordMusic(rom)
     patches.aesthetics.reduceMessageLengths(rom, rnd)
     patches.aesthetics.allowColorDungeonSpritesEverywhere(rom)
-    if settings.overworld == "alttp":
-        # Only apply this to ALTTP right now, as it might cause issues otherwise.
+    if settings.overworld == "alttp" or settings.overworld == "random":
+        # Only apply this to ALTTP/random right now, as it might cause issues otherwise.
         patches.aesthetics.allowOverworldBackgroundTileTransitions(rom)
     if settings.music == 'random':
         patches.music.randomizeMusic(rom, rnd)
